@@ -6,6 +6,10 @@
         android:title="@string/new_match" />
 
     <item
+        android:id="@+id/add_game"
+        android:title="@string/add_game" />
+
+    <item
         android:id="@+id/add_player"
         android:title="@string/add_player" />
 </menu>
