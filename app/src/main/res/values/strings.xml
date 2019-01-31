@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">PokerCounter</string>
-    <string name="title_home">Home</string>
-    <string name="title_dashboard">Dashboard</string>
-    <string name="title_notifications">Notifications</string>
+    <string name="title_match">Match</string>
+    <string name="title_score_board">Score Board</string>
+    <string name="add_player">Add player</string>
+    <string name="new_match">New match</string>
 </resources>
