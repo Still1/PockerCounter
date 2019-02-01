@@ -7,7 +7,7 @@ import android.widget.Toast;
 
 public class DataOpenHelper extends SQLiteOpenHelper {
 
-    private static final int DB_VERSION = 4;
+    private static final int DB_VERSION = 5;
     private static final String DB_NAME = "pokerCounter";
     public static final String TABLE_NAME_PLAYER = "t_player";
     public static final String TABLE_NAME_MATCH = "t_match";
@@ -35,8 +35,16 @@ public class DataOpenHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        String sql = "drop table if exists " + TABLE_NAME_PLAYER;
-        db.execSQL(sql);
+        String deletePlayerSql = "drop table if exists " + TABLE_NAME_PLAYER;
+        String deleteMatchSql = "drop table if exists " + TABLE_NAME_MATCH;
+        String deleteMatchPlayerSql = "drop table if exists " + TABLE_NAME_MATCH_PLAYER;
+        String deleteGameSql = "drop table if exists " + TABLE_NAME_GAME;
+        String deleteGamePlayerSql = "drop table if exists " + TABLE_NAME_GAME_PLAYER;
+        db.execSQL(deletePlayerSql);
+        db.execSQL(deleteMatchSql);
+        db.execSQL(deleteMatchPlayerSql);
+        db.execSQL(deleteGameSql);
+        db.execSQL(deleteGamePlayerSql);
         onCreate(db);
     }
 }

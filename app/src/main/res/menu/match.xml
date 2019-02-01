@@ -6,8 +6,16 @@
         android:title="@string/new_match" />
 
     <item
+        android:id="@+id/resume_match"
+        android:title="Resume match" />
+
+    <item
         android:id="@+id/add_game"
         android:title="@string/add_game" />
+
+    <item
+        android:id="@+id/delete_game"
+        android:title="Delete a game" />
 
     <item
         android:id="@+id/add_player"

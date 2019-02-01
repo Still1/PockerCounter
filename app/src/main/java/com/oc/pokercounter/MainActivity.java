@@ -33,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
     private List<Map<String, Object>> scoreGridViewData;
 
     private Integer matchId;
+    private Integer resumeMatchId;
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -80,6 +81,12 @@ public class MainActivity extends AppCompatActivity {
             case R.id.add_game:
                 this.addGame();
                 return true;
+            case R.id.resume_match:
+                this.resumeMatch();
+                return true;
+            case R.id.delete_game:
+                this.deleteGame();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -92,15 +99,20 @@ public class MainActivity extends AppCompatActivity {
         inputDialog.setPositiveButton("confirm", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                String editTextString = editText.getText().toString();
+                if(editTextString == null || editTextString.equals("")) {
+                    Toast.makeText(MainActivity.this, "Player's name should not be empty.", Toast.LENGTH_LONG).show();
+                    return;
+                }
                 SQLiteDatabase db = MainActivity.this.dataOpenHelper.getWritableDatabase();
                 db.beginTransaction();
                 ContentValues contentValues = new ContentValues();
-                contentValues.put("name", editText.getText().toString());
+                contentValues.put("name", editTextString);
                 db.insert(DataOpenHelper.TABLE_NAME_PLAYER, null, contentValues);
                 db.setTransactionSuccessful();
                 db.endTransaction();
                 db.close();
-                Toast.makeText(MainActivity.this, "Add player " + editText.getText().toString() + " successfully.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Add player " + editText.getText().toString() + " successfully.", Toast.LENGTH_LONG).show();
             }
         });
         inputDialog.setNegativeButton("cancel", new DialogInterface.OnClickListener() {
@@ -115,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
         this.matchPlayerList = new ArrayList<>();
         this.matchPlayerNameList = new ArrayList<>();
         this.scoreGridViewData = new ArrayList<>();
+        this.matchId = null;
         final List<Map<String, Object>> playerList = new ArrayList<>();
         final List<String> playerNameList = new ArrayList<>();
         SQLiteDatabase db = this.dataOpenHelper.getReadableDatabase();
@@ -150,9 +163,13 @@ public class MainActivity extends AppCompatActivity {
             new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
+                    if(matchPlayerList.size() != 5) {
+                        Toast.makeText(MainActivity.this, "Failure!! Only support 5 players' game.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
                     SQLiteDatabase db = dataOpenHelper.getWritableDatabase();
                     db.beginTransaction();
-                    db.execSQL("insert into " + DataOpenHelper.TABLE_NAME_MATCH + " (id, match_time) values (null, null)");
+                    db.execSQL("insert into " + DataOpenHelper.TABLE_NAME_MATCH + " (id, match_time) values (null, datetime('now', 'localtime'))");
                     Cursor cursor = db.rawQuery("select last_insert_rowid() from " + DataOpenHelper.TABLE_NAME_MATCH, null);
                     cursor.moveToFirst();
                     matchId = cursor.getInt(0);
@@ -168,8 +185,8 @@ public class MainActivity extends AppCompatActivity {
                     db.setTransactionSuccessful();
                     db.endTransaction();
                     db.close();
-                    MainActivity.this.showHeadGridView();
-
+                    showHeadGridView();
+                    showScoreGridView();
                 }
             });
         multiChoiceDialog.setNegativeButton("cancel", new DialogInterface.OnClickListener() {
@@ -189,6 +206,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void addGame() {
+        if(matchId == null) {
+            Toast.makeText(MainActivity.this, "Failure!! Please new or resume a match first.", Toast.LENGTH_LONG).show();
+            return;
+        }
         gameInformation = new HashMap<>();
         this.showWhoIsLandlordDialog();
     }
@@ -215,6 +236,10 @@ public class MainActivity extends AppCompatActivity {
                 new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
+                        if(landlordList.size() < 1 || landlordList.size() > 2) {
+                            Toast.makeText(MainActivity.this, "Failure!! The number of landlord is impossible.", Toast.LENGTH_LONG).show();
+                            return;
+                        }
                         gameInformation.put("landlordList", landlordList);
                         showWhoIsWinnerDialog();
                     }
@@ -231,6 +256,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void showWhoIsWinnerDialog() {
         final String[] items = { "farmer","landlord" };
+        gameInformation.put("winner", 0);
         AlertDialog.Builder singleChoiceDialog = new AlertDialog.Builder(MainActivity.this);
         singleChoiceDialog.setTitle("Who is winner?");
         singleChoiceDialog.setSingleChoiceItems(items, 0,
@@ -244,13 +270,16 @@ public class MainActivity extends AppCompatActivity {
             new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
+                    if(!gameInformation.containsKey("winner")) {
+                        gameInformation.put("winner", 0);
+                    }
                     showWhatIsTheNumberOfBombs();
                 }
             });
         singleChoiceDialog.setNegativeButton("previous", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                showWhoIsWinnerDialog();
+                showWhoIsLandlordDialog();
             }
         });
         singleChoiceDialog.show();
@@ -265,7 +294,11 @@ public class MainActivity extends AppCompatActivity {
             new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    gameInformation.put("bombs", editText.getText().toString());
+                    String editTextString = editText.getText().toString();
+                    if(editTextString == null || editTextString.equals("")) {
+                        editTextString = "0";
+                    }
+                    gameInformation.put("bombs", editTextString);
                     saveGameInformation();
                     showScoreGridView();
                 }
@@ -273,7 +306,7 @@ public class MainActivity extends AppCompatActivity {
         inputDialog.setNegativeButton("previous", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                showWhatIsTheNumberOfBombs();
+                showWhoIsWinnerDialog();
             }
         });
         inputDialog.show();
@@ -361,5 +394,152 @@ public class MainActivity extends AppCompatActivity {
         SimpleAdapter adapter = new SimpleAdapter(this, this.scoreGridViewData, R.layout.gridview_item, from, to);
         GridView scoreGridView = findViewById(R.id.scoreGridView);
         scoreGridView.setAdapter(adapter);
+    }
+
+    private void resumeMatch() {
+        final List<Map<String, Object>> matchList = new ArrayList<>();
+        final List<String> matchNameList = new ArrayList<>();
+        SQLiteDatabase db = this.dataOpenHelper.getReadableDatabase();
+        Cursor cursor = db.query(DataOpenHelper.TABLE_NAME_MATCH, new String[] {"id", "match_time"}, null, null, null, null, "match_time desc");
+        if (cursor.getCount() > 0) {
+            while (cursor.moveToNext()) {
+                Map<String, Object> matchMap = new HashMap<>();
+                matchMap.put("id", cursor.getInt(0));
+                matchMap.put("match_time", cursor.getString(1));
+                matchList.add(matchMap);
+                matchNameList.add(cursor.getString(1));
+            }
+        }
+        resumeMatchId = (Integer) matchList.get(0).get("id");
+
+        String[] items =  matchNameList.toArray(new String[matchNameList.size()]);
+        AlertDialog.Builder singleChoiceDialog = new AlertDialog.Builder(MainActivity.this);
+        singleChoiceDialog.setTitle("Please choose a match");
+        singleChoiceDialog.setSingleChoiceItems(items, 0,
+            new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    resumeMatchId = (Integer) matchList.get(which).get("id");
+                }
+            });
+        singleChoiceDialog.setPositiveButton("confirm",
+            new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    if(resumeMatchId == null) {
+                        resumeMatchId = (Integer) matchList.get(0).get("id");
+                    }
+                    matchId = resumeMatchId;
+                    resumeMatchPlayerList();
+                    showHeadGridView();
+                    resumeScoreGridViewData();
+                    showScoreGridView();
+                }
+            });
+        singleChoiceDialog.setNegativeButton("cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                resumeMatchId = null;
+            }
+        });
+        singleChoiceDialog.show();
+    }
+
+    private void resumeMatchPlayerList() {
+        matchPlayerList = new ArrayList<>();
+        matchPlayerNameList = new ArrayList<>();
+        SQLiteDatabase db = this.dataOpenHelper.getReadableDatabase();
+        Cursor cursor = db.rawQuery("select player_id, name from t_match_player inner join t_player on t_match_player.player_id = t_player.id where match_id = ? order by order_num", new String[] {matchId.toString()});
+        if (cursor.getCount() > 0) {
+            while (cursor.moveToNext()) {
+                Map<String, Object> playerMap = new HashMap<>();
+                playerMap.put("id", cursor.getInt(0));
+                playerMap.put("name", cursor.getString(1));
+                matchPlayerList.add(playerMap);
+                matchPlayerNameList.add(cursor.getString(1));
+            }
+        }
+        db.close();
+    }
+
+    private void resumeScoreGridViewData() {
+        scoreGridViewData = new ArrayList<>();
+        SQLiteDatabase db = this.dataOpenHelper.getReadableDatabase();
+        Cursor cursor = db.rawQuery("select id from t_game where match_id = ? order by order_num", new String[] {matchId.toString()});
+        if (cursor.getCount() > 0) {
+            while (cursor.moveToNext()) {
+                for(Map<String, Object> matchPlayerMap : matchPlayerList) {
+                    Cursor gamePlayerCursor = db.rawQuery("select score from t_game_player where game_id = ? and player_id  = ? ", new String[] {String.valueOf(cursor.getInt(0)), matchPlayerMap.get("id").toString()});
+                    if (gamePlayerCursor.getCount() > 0) {
+                        gamePlayerCursor.moveToFirst();
+                        int playerGameScore = gamePlayerCursor.getInt(0);
+                        int totalScore = playerGameScore;
+                        int formerIndex = scoreGridViewData.size() - 5;
+                        if(formerIndex >= 0) {
+                            Integer formerScore = (Integer)scoreGridViewData.get(formerIndex).get("score");
+                            totalScore += formerScore;
+                        }
+                        Map<String, Object> playerScoreMap = new HashMap<>();
+                        playerScoreMap.put("score", totalScore);
+                        scoreGridViewData.add(playerScoreMap);
+                    }
+                }
+            }
+        }
+        db.close();
+    }
+
+    private void deleteGame() {
+        AlertDialog.Builder inputDialog = new AlertDialog.Builder(MainActivity.this);
+        inputDialog.setTitle("Are you sure you want to delete a game?");
+        inputDialog.setPositiveButton("yes",
+            new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    if(matchId == null || scoreGridViewData.size() < 5) {
+                        Toast.makeText(MainActivity.this, "Nothing to delete.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    SQLiteDatabase db = MainActivity.this.dataOpenHelper.getReadableDatabase();
+                    Cursor cursor = db.rawQuery("select id from t_game where match_id = ? order by order_num desc", new String[] {matchId.toString()});
+                    Integer gameId = null;
+                    if (cursor.getCount() > 0) {
+                        cursor.moveToFirst();
+                        gameId = cursor.getInt(0);
+                        db.beginTransaction();
+                        Cursor gamePlayerCursor = db.rawQuery("select player_id, score from t_game_player where game_id = ? ", new String[] {gameId.toString()});
+                        if (gamePlayerCursor.getCount() > 0) {
+                            while(gamePlayerCursor.moveToNext()) {
+                                String playerId = String.valueOf(gamePlayerCursor.getInt(0));
+                                Cursor matchPlayerCursor = db.rawQuery("select score from t_match_player where match_id = ? and player_id  = ? ", new String[] {matchId.toString(), playerId});
+                                Integer scoreBeforeDeleted = null;
+                                if (matchPlayerCursor.getCount() > 0) {
+                                    matchPlayerCursor.moveToFirst();
+                                    scoreBeforeDeleted = matchPlayerCursor.getInt(0);
+                                }
+                                Integer scoreAfterDelete = scoreBeforeDeleted - gamePlayerCursor.getInt(1);
+                                ContentValues contentValues = new ContentValues();
+                                contentValues.put("score", scoreAfterDelete);
+                                db.update(DataOpenHelper.TABLE_NAME_MATCH_PLAYER, contentValues, "match_id = ? and player_id = ?", new String[] {matchId.toString(), playerId});
+                            }
+                        }
+                        db.delete(DataOpenHelper.TABLE_NAME_GAME_PLAYER, "game_id = ?", new String[] {gameId.toString()});
+                        db.delete(DataOpenHelper.TABLE_NAME_GAME, "id = ?", new String[] {gameId.toString()});
+                        db.setTransactionSuccessful();
+                        db.endTransaction();
+                        db.close();
+                        for(int i = 0; i < 5; i++) {
+                            scoreGridViewData.remove(scoreGridViewData.size() - 1);
+                        }
+                        showScoreGridView();
+                    }
+                }
+            });
+        inputDialog.setNegativeButton("no", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+            }
+        });
+        inputDialog.show();
     }
 }
