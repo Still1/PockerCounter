@@ -10,7 +10,7 @@
         android:height="50px" />
 
     <RadioGroup
-        android:id="@+id/winnerRadioGroup1"
+        android:id="@+id/winnerRadioGroup"
         android:layout_width ="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -20,14 +20,14 @@
             android:id="@+id/winnerRadioButton1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="landlord"
+            android:text="farmer"
             android:checked="true"
             />
         <RadioButton
             android:id="@+id/winnerRadioButton2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="farmer"
+            android:text="landlord"
             />
     </RadioGroup>
 
